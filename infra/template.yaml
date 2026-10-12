@@ -1,0 +1,245 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  HVAC valve set-point optimiser. PLC writes record to S3, an EventBridge rule
+  wakes Lambda 2, which queries the SageMaker endpoint for the optimal valve
+  positions and persists recommendations in DynamoDB. The dashboard reads
+  the answers over an HTTP API.
+
+Parameters:
+  DataBucketName:
+    Type: String
+    Description: >
+      Globally unique bucket name for raw PLC records and training datasets.
+  EndpointName:
+    Type: String
+    Default: hvac-valve-optimiser
+    Description: SageMaker endpoint name (created and managed by scripts/launch.py).
+  Search:
+    Type: String
+    Default: observed
+    AllowedValues: [observed, full]
+    Description: >
+      observed = rank only valve combinations the plant has actually run.
+      full = rank every combination, including ones never tried.
+  CorsOrigin:
+    Type: String
+    Default: '*'
+    Description: Origin allowed to call the dashboard API.
+  HistoryTtlDays:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    MaxValue: 365
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 512
+    Architectures: [arm64]
+    Tracing: Active
+
+Resources:
+
+  # ----------------------------------------------------------------- storage
+  DataBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref DataBucketName
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      VersioningConfiguration: {Status: Enabled}
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-raw-after-a-year
+            Status: Enabled
+            Prefix: raw/
+            ExpirationInDays: 365
+          - Id: drop-old-versions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+
+  RecommendationTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-recommendations'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: pk, AttributeType: S}
+        - {AttributeName: sk, AttributeType: S}
+      KeySchema:
+        - {AttributeName: pk, KeyType: HASH}
+        - {AttributeName: sk, KeyType: RANGE}
+      TimeToLiveSpecification: {AttributeName: ttl, Enabled: true}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+
+  # --------------------------------------------------- Lambda 2: inference
+  InferenceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-inference'
+      RetentionInDays: 30
+
+  InferenceFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: InferenceLogGroup
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-inference'
+      CodeUri: ../src/lambda_infer/
+      Handler: app.lambda_handler
+      Description: S3 ObjectCreated (EventBridge) -> SageMaker endpoint -> DynamoDB
+      Timeout: 90
+      Environment:
+        Variables:
+          ENDPOINT_NAME: !Ref EndpointName
+          TABLE_NAME: !Ref RecommendationTable
+          SEARCH: !Ref Search
+          TOP_K: '5'
+          HISTORY_TTL_DAYS: !Ref HistoryTtlDays
+      Policies:
+        - S3ReadPolicy: {BucketName: !Ref DataBucketName}
+        - DynamoDBWritePolicy: {TableName: !Ref RecommendationTable}
+        - Statement:
+            Effect: Allow
+            Action: sagemaker:InvokeEndpoint
+            Resource: !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/${EndpointName}'
+      Events:
+        NewPlcRecord:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source: [aws.s3]
+              detail-type: ['Object Created']
+              detail:
+                bucket:
+                  name: [!Ref DataBucketName]
+                object:
+                  key:
+                    - prefix: raw/
+
+  # ------------------------------------------------ dashboard read API
+  DashboardApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+      CorsConfiguration:
+        AllowOrigins: [!Ref CorsOrigin]
+        AllowMethods: [GET, OPTIONS]
+        AllowHeaders: [Content-Type]
+
+  DashboardLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-dashboard-api'
+      RetentionInDays: 30
+
+  DashboardFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: DashboardLogGroup
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-dashboard-api'
+      CodeUri: ../src/lambda_api/
+      Handler: app.lambda_handler
+      Description: Serves the current recommendation and recent history
+      MemorySize: 256
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref RecommendationTable
+          CORS_ORIGIN: !Ref CorsOrigin
+      Policies:
+        - DynamoDBReadPolicy: {TableName: !Ref RecommendationTable}
+      Events:
+        Current:
+          Type: HttpApi
+          Properties: {ApiId: !Ref DashboardApi, Path: /recommendation, Method: GET}
+        History:
+          Type: HttpApi
+          Properties: {ApiId: !Ref DashboardApi, Path: /history, Method: GET}
+
+  # ------------------------------------------------- SageMaker execution role
+  SageMakerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-sagemaker'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: sagemaker.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sagemaker-core
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/sagemaker/*'
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                Resource: '*'
+        - PolicyName: data-bucket
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject, s3:ListBucket, s3:DeleteObject]
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${DataBucketName}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${DataBucketName}/*'
+
+  # --------------------------------------------- alarm: endpoint call failures
+  InferenceErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-inference-errors'
+      AlarmDescription: Lambda 2 is failing, so the dashboard is going stale.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - {Name: FunctionName, Value: !Ref InferenceFunction}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  DataBucket:
+    Description: Lambda 1 writes PLC records under raw/; training data under training/
+    Value: !Ref DataBucket
+  RawPrefix:
+    Description: Writing here triggers the optimiser
+    Value: !Sub 's3://${DataBucketName}/raw/'
+  TrainingPrefix:
+    Description: Point the SageMaker training job at this
+    Value: !Sub 's3://${DataBucketName}/training/'
+  TableName:
+    Value: !Ref RecommendationTable
+  SageMakerRoleArn:
+    Description: Pass to scripts/launch.py
+    Value: !GetAtt SageMakerRole.Arn
+  DashboardEndpoint:
+    Description: GET /recommendation and GET /history?hours=6
+    Value: !Sub 'https://${DashboardApi}.execute-api.${AWS::Region}.amazonaws.com/v1'
+

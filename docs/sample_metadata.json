@@ -1,0 +1,296 @@
+{
+  "target": "Total kW",
+  "features": [
+    "PCV-1(%)",
+    "PCV-2(%)",
+    "PCV-3(%)",
+    "PCV-4(%)",
+    "Outdoor-T8(\u00b0C)",
+    "Outdoor Humidity(%)",
+    "Room-T7(\u00b0C)",
+    "Indoor Humidity(%)"
+  ],
+  "valves": [
+    "PCV-1(%)",
+    "PCV-2(%)",
+    "PCV-3(%)",
+    "PCV-4(%)"
+  ],
+  "conditions": [
+    "Outdoor-T8(\u00b0C)",
+    "Outdoor Humidity(%)",
+    "Room-T7(\u00b0C)",
+    "Indoor Humidity(%)"
+  ],
+  "valve_options": {
+    "PCV-1(%)": [
+      95,
+      100
+    ],
+    "PCV-2(%)": [
+      93,
+      95,
+      100
+    ],
+    "PCV-3(%)": [
+      90,
+      93,
+      95,
+      100
+    ],
+    "PCV-4(%)": [
+      90,
+      93,
+      95,
+      100
+    ]
+  },
+  "observed_combinations": [
+    {
+      "valves": {
+        "PCV-1(%)": 95,
+        "PCV-2(%)": 100,
+        "PCV-3(%)": 95,
+        "PCV-4(%)": 100
+      },
+      "measured_kw": 3.7889,
+      "rows": 304,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 93,
+        "PCV-3(%)": 100,
+        "PCV-4(%)": 90
+      },
+      "measured_kw": 3.7187,
+      "rows": 975,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 93,
+        "PCV-3(%)": 100,
+        "PCV-4(%)": 93
+      },
+      "measured_kw": 3.7328,
+      "rows": 142,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 95,
+        "PCV-3(%)": 95,
+        "PCV-4(%)": 90
+      },
+      "measured_kw": 3.6662,
+      "rows": 680,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 95,
+        "PCV-3(%)": 100,
+        "PCV-4(%)": 93
+      },
+      "measured_kw": 3.6913,
+      "rows": 919,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 100,
+        "PCV-3(%)": 90,
+        "PCV-4(%)": 100
+      },
+      "measured_kw": 3.6013,
+      "rows": 1076,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 100,
+        "PCV-3(%)": 93,
+        "PCV-4(%)": 100
+      },
+      "measured_kw": 3.565,
+      "rows": 487,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 100,
+        "PCV-3(%)": 95,
+        "PCV-4(%)": 100
+      },
+      "measured_kw": 3.6214,
+      "rows": 211,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 100,
+        "PCV-3(%)": 100,
+        "PCV-4(%)": 95
+      },
+      "measured_kw": 3.6756,
+      "rows": 289,
+      "days": 1
+    },
+    {
+      "valves": {
+        "PCV-1(%)": 100,
+        "PCV-2(%)": 100,
+        "PCV-3(%)": 100,
+        "PCV-4(%)": 100
+      },
+      "measured_kw": 3.8295,
+      "rows": 226,
+      "days": 2
+    }
+  ],
+  "condition_ranges": {
+    "Outdoor-T8(\u00b0C)": [
+      29.56,
+      37.82
+    ],
+    "Outdoor Humidity(%)": [
+      40.94,
+      72.72
+    ],
+    "Room-T7(\u00b0C)": [
+      14.8,
+      25.86
+    ],
+    "Indoor Humidity(%)": [
+      38.93,
+      66.97
+    ]
+  },
+  "condition_medians": {
+    "Outdoor-T8(\u00b0C)": 33.6,
+    "Outdoor Humidity(%)": 57.27,
+    "Room-T7(\u00b0C)": 20.86,
+    "Indoor Humidity(%)": 43.75
+  },
+  "feature_importance": {
+    "PCV-1(%)": 0.19202785193920135,
+    "PCV-2(%)": 0.07914633303880692,
+    "PCV-3(%)": 0.5424691438674927,
+    "PCV-4(%)": 0.07612118870019913,
+    "Outdoor-T8(\u00b0C)": 0.023813696578145027,
+    "Outdoor Humidity(%)": 0.030787242576479912,
+    "Room-T7(\u00b0C)": 0.03722764551639557,
+    "Indoor Humidity(%)": 0.018406838178634644
+  },
+  "validation": {
+    "per_day": [
+      {
+        "day": "2026-09-24",
+        "n": 702,
+        "r2": -0.26734175198282273,
+        "mae": 0.09713596975429782,
+        "actual_kw": 3.704849002849003,
+        "predicted_kw": 3.7435877323150635
+      },
+      {
+        "day": "2026-09-25",
+        "n": 328,
+        "r2": -17.7140290929274,
+        "mae": 0.14348305733610953,
+        "actual_kw": 3.7891554878048783,
+        "predicted_kw": 3.6463675498962402
+      },
+      {
+        "day": "2026-09-29",
+        "n": 919,
+        "r2": 0.10787823719911682,
+        "mae": 0.04706761844788596,
+        "actual_kw": 3.691324265505985,
+        "predicted_kw": 3.666775703430176
+      },
+      {
+        "day": "2026-09-30",
+        "n": 1117,
+        "r2": 0.10395691112512206,
+        "mae": 0.0479460179526142,
+        "actual_kw": 3.720540734109221,
+        "predicted_kw": 3.7009243965148926
+      },
+      {
+        "day": "2026-10-01",
+        "n": 487,
+        "r2": -0.29845148677922206,
+        "mae": 0.03365240878784683,
+        "actual_kw": 3.5649897330595484,
+        "predicted_kw": 3.5708014965057373
+      },
+      {
+        "day": "2026-10-05",
+        "n": 1076,
+        "r2": -1.7651831708376817,
+        "mae": 0.060885502770930904,
+        "actual_kw": 3.6013122676579923,
+        "predicted_kw": 3.6480400562286377
+      },
+      {
+        "day": "2026-10-06",
+        "n": 680,
+        "r2": -1.510808028572598,
+        "mae": 0.060122562831990786,
+        "actual_kw": 3.6662264705882355,
+        "predicted_kw": 3.7216789722442627
+      }
+    ],
+    "pooled_r2": 0.11868726790791717,
+    "pooled_mae": 0.06307169029334998,
+    "pooled_rmse": 0.07906698458863093,
+    "days_passed": 2,
+    "n_days": 7,
+    "random_split_r2": 0.9102015751189069,
+    "pass_rate": 0.2857142857142857,
+    "min_pooled_r2": 0.5,
+    "min_day_pass_rate": 0.7
+  },
+  "actionable": false,
+  "data": {
+    "files_read": 28,
+    "files_skipped": [],
+    "rows_raw": 6313,
+    "duplicates_dropped": 0,
+    "relabelled_files": [
+      "12_plc_data (7).xlsx",
+      "13_plc_data (5).xlsx",
+      "14_plc_data (3).xlsx",
+      "15_plc_data (7).xlsx"
+    ],
+    "compressor_off_rows": 603,
+    "days": [
+      "2026-09-24",
+      "2026-09-25",
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-01",
+      "2026-10-05",
+      "2026-10-06"
+    ]
+  },
+  "hyperparameters": {
+    "n_estimators": 400,
+    "learning_rate": 0.05,
+    "max_depth": 4,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 5,
+    "reg_lambda": 1.0
+  },
+  "training_rows": 5309
+}

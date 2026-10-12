@@ -1,0 +1,1 @@
+# boto3 ships with the Lambda runtime; nothing else is needed
